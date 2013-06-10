@@ -16,7 +16,17 @@
          (http/encode-params {"name" "abc+xyz" "var" 123}))))
 
 (deftest head
-  (is (= 200 (:status (http/head "http://www.google.com"))))
+  (is (= 200
+         (-> (http/head "http://www.google.com")
+           (:status))))
 
   (is (thrown? java.net.SocketTimeoutException
                (http/head "http://www.google.com" {:timeout 10}))))
+
+(deftest test-methods
+  (is (= 200
+         (-> (http/get "http://www.google.com")
+           (:status))))
+  (is (= 200
+         (-> (http/post "http://duckduckgo.com" {} "q=clojure+rocks")
+           :status))))

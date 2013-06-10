@@ -55,33 +55,48 @@
          (.setRequestProperty conn k v))
        conn)))
 
+(defn get-response-body [^URLConnection conn]
+  (with-open [in (.getInputStream conn)
+              ostr (ByteArrayOutputStream. 1024)]
+    (jio/copy in ostr)
+    (.toString ostr)))
+
 (defn head [url & [opts]]
   (let [opts (or opts {})
         conn (make-http-connection url (assoc opts :method "HEAD"))]
     {:status (.getResponseCode conn)
      :headers (get-response-headers conn)}))
 
-(defn get [url & [opts]]
+(defn http-do-method [method url & [opts]]
   (let [opts (or opts {})
-        conn (make-http-connection url (assoc opts :method "GET"))]
-    (with-open [in (.getInputStream conn)
-                ostr (ByteArrayOutputStream. 1024)]
-      (jio/copy in ostr)
-      {:status (.getResponseCode conn)
-       :headers (get-response-headers conn)
-       :body (.toString ostr)})))
+        conn (make-http-connection url (assoc opts :method method))]
+    {:status (.getResponseCode conn)
+     :headers (get-response-headers conn)
+     :body (get-response-body conn)}))
+
+(defn get [url & [opts]]
+  (http-do-method "GET" url opts))
+
+(defn write-request-body [^URLConnection conn ^String body]
+  (with-open [out (.getOutputStream conn)
+              writer ^Writer (OutputStreamWriter. out)]
+    (.write writer body)
+    (.flush writer)))
+
+(defn http-do-method-body [method url & [opts body]]
+  (let [opts (or opts {})
+        conn (make-http-connection url (assoc opts :method method))
+        ^String body (if (map? body) (encode-params body) (str (or body "")))]
+    (write-request-body conn body)
+    {:status (.getResponseCode conn)
+     :headers (get-response-headers conn)
+     :body (get-response-body conn)}))
 
 (defn post [url & [opts body]]
-  (let [opts (or opts {})
-        conn (make-http-connection url (assoc opts :method "POST"))
-        ^String body (if (map? body) (encode-params body) (str (or body "")))]
-    (with-open [out (.getOutputStream conn)
-                writer ^Writer (OutputStreamWriter. out)]
-      (.write writer body)
-      (.flush writer)
-      (with-open [in (.getInputStream conn)
-                  ostr (ByteArrayOutputStream. 1024)]
-        (jio/copy in ostr)
-        {:status (.getResponseCode conn)
-         :headers (get-response-headers conn)
-         :body (.toString ostr)}))))
+  (http-do-method-body "POST" url opts body))
+
+(defn delete [url & [opts]]
+  (http-do-method "DELETE" url opts))
+
+(defn put [url & [opts body]]
+  (http-do-method-body "PUT" url opts body))
