@@ -48,12 +48,6 @@
          (.setRequestProperty conn k v))
        conn)))
 
-(defn get-response-body [^URLConnection conn]
-  (with-open [in (.getInputStream conn)
-              ostr (ByteArrayOutputStream. 1024)]
-    (jio/copy in ostr)
-    (.toString ostr)))
-
 (defn head [url & [opts]]
   (let [opts (or opts {})
         conn (make-http-connection url (assoc opts :method "HEAD"))]
@@ -65,7 +59,10 @@
         conn (make-http-connection url (assoc opts :method method))]
     {:status (.getResponseCode conn)
      :headers (get-response-headers conn)
-     :body (get-response-body conn)}))
+     :body (try
+             (slurp (.getInputStream conn))
+             (catch IOException ex
+               (slurp (.getErrorStream conn))))}))
 
 (defn get [url & [opts]]
   (http-do-method "GET" url opts))
@@ -83,7 +80,10 @@
     (write-request-body conn body)
     {:status (.getResponseCode conn)
      :headers (get-response-headers conn)
-     :body (get-response-body conn)}))
+     :body (try
+             (slurp (.getInputStream conn))
+             (catch IOException ex
+               (slurp (.getErrorStream conn))))}))
 
 (defn post [url & [opts body]]
   (http-do-method-body "POST" url opts body))
