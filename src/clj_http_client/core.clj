@@ -4,16 +4,9 @@
    [clojure.string :as str]
    [clojure.java.io :as jio])
   (:import
-   java.io.ByteArrayOutputStream
-   java.io.File
-   java.io.InputStream
-   java.io.OutputStream
-   java.io.OutputStreamWriter
-   java.net.URL
-   java.net.URLEncoder
-   java.net.URLDecoder
-   java.net.URLConnection
-   java.net.HttpURLConnection))
+   (java.io ByteArrayOutputStream File InputStream OutputStream OutputStreamWriter
+            IOException)
+   (java.net URL URLEncoder URLDecoder URLConnection HttpURLConnection)))
 
 (defn url-encode [value]
   (let [^String value (if (keyword? value) (name value) (str value))]
